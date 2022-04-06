@@ -6,6 +6,7 @@ import router from './routes';
 import { connectDB } from './config/db';
 import { initializePassport } from './utils/passport_strategy';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
+const { errors } = require('celebrate');
 
 connectDB();
 
@@ -20,6 +21,7 @@ app.use(cors());
 app.use('/api/', router);
 
 app.use(notFound);
+app.use(errors());
 app.use(errorHandler);
 
 app.listen(port, () => {

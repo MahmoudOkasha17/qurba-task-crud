@@ -1,4 +1,5 @@
 import { Schema, Document, model } from 'mongoose';
+import getSlug from 'speakingurl';
 
 interface Location extends Document {
   type: 'Point' | 'Polygon';
@@ -39,20 +40,34 @@ const restaurantSchema = new Schema(
     },
     uniqueName: {
       type: String,
-      required: true,
       unique: true,
     },
     cuisine: {
       type: String,
       required: true,
     },
-
-    location: location,
+    location: {
+      type: location,
+      required: false,
+      default: {
+        type: 'Point',
+        coordinates: [0, 0],
+      },
+    },
   },
   {
     timestamps: true,
   }
 );
 restaurantSchema.index({ location: '2dsphere' });
+
+restaurantSchema.pre('save', function setUniqueName(next) {
+  this.uniqueName = getSlug(`${this.name}-${this.user}`, {
+    uric: false,
+  });
+
+  next();
+});
+
 const RestaurantModel = model('Restaurant', restaurantSchema);
 export { Location, Restaurant, RestaurantModel };

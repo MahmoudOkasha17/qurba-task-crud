@@ -9,16 +9,15 @@ import {
 import { User } from '../../database/models/userModel';
 
 // @desc    Create Restaurant
-// @route   PUT /api/restaurants/create
+// @route   PUT /api/restaurants
 // @access  Private
 const createRestaurant = asyncHandler(
   async (req: Request & { user: User }, res: Response) => {
-    const { name, uniqueName, cuisine, location }: Restaurant = req.body;
+    const { name, cuisine, location }: Restaurant = req.body;
     const user = req.user;
     // create restaurant
     const restaurant: Restaurant = await RestaurantModel.create({
       name,
-      uniqueName,
       cuisine,
       location,
       user: user._id,
@@ -48,13 +47,14 @@ const createRestaurant = asyncHandler(
 // @access  Public
 const getRestaurantByIdOrUniqueName = asyncHandler(
   async (req: Request, res: Response) => {
-    let restaurant: Restaurant | any[];
+    let restaurant: Restaurant;
+
     //check if id is valid
     if (mongoose.Types.ObjectId.isValid(req.params.id)) {
       restaurant = await RestaurantModel.findById(req.params.id);
     } else {
       //if not valid id, try to find by uniqueName
-      restaurant = await RestaurantModel.find({
+      restaurant = await RestaurantModel.findOne({
         uniqueName: req.params.id,
       });
     }
@@ -69,36 +69,79 @@ const getRestaurantByIdOrUniqueName = asyncHandler(
 );
 
 // @desc    Get all Restaurants or filter by cuisine
-// @route   GET /api/restaurants/:filter?
+// @route   GET /api/restaurants?cuisine
 // @access  Public
-const getRestaurants = asyncHandler(async (req: Request, res: Response) => {
-  const restaurants: Restaurant[] = await RestaurantModel.find(
-    req.params.filter ? { cuisine: req.params.filter } : {}
-  );
-  res.json(restaurants);
+const getAllRestaurants = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, cuisine } = req.query;
+  const query = cuisine ? { cuisine: cuisine } : {};
+
+  const total = await RestaurantModel.countDocuments(query);
+  const restaurants: Restaurant[] = await RestaurantModel.find(query)
+    .limit(Number(limit) || 10)
+    .skip(Number(limit) || 10 * (Number(page) || 1 - 1));
+
+  res.json({
+    restaurants,
+    total: total,
+    limit: Number(limit) || 10,
+    page: Number(page) || 1,
+    pages: Math.ceil(total / (Number(limit) || 10)) || 1,
+  });
 });
 
 // @desc    Get all Restaurants near specific location
-// @route   GET /api/restaurants/find/:distance?
+// @route   GET /api/restaurants/findNear
 // @access  Public
-const findNear = asyncHandler(async (req: Request, res: Response) => {
-  const { type, coordinates }: Location = req.body;
+const findNearRestaurants = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { type, coordinates }: Location = req.body;
+    const { page, limit } = req.query;
 
-  const restaurants: Restaurant[] = await RestaurantModel.find({
-    location: {
-      $nearSphere: {
-        $geometry: { type: type, coordinates: coordinates },
-        $maxDistance: req.params.distance ? req.params.distance : 1000,
+    const pipeline: any = [
+      {
+        $geoNear: {
+          near: {
+            type: type,
+            coordinates: coordinates,
+          },
+          distanceField: 'distance',
+          maxDistance: 1000,
+          spherical: true,
+        },
       },
-    },
-  });
+    ];
 
-  res.json(restaurants);
-});
+    const [restaurants, total] = await Promise.all([
+      RestaurantModel.aggregate([
+        ...pipeline,
+        {
+          $skip: (Number(page) || 1 - 1) * (Number(limit) || 10),
+        },
+        {
+          $limit: Number(limit) || 10,
+        },
+      ]),
+      RestaurantModel.aggregate([
+        ...pipeline,
+        {
+          $count: 'count',
+        },
+      ]),
+    ]);
+
+    res.json({
+      restaurants,
+      total: total[0]?.count,
+      limit: Number(limit) || 10,
+      page: Number(page) || 1,
+      pages: Math.ceil(total[0]?.count / (Number(limit) || 10)) || 1,
+    });
+  }
+);
 
 export {
   createRestaurant,
   getRestaurantByIdOrUniqueName,
-  getRestaurants,
-  findNear,
+  getAllRestaurants,
+  findNearRestaurants,
 };
