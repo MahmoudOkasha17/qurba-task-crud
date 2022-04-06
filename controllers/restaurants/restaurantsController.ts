@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
 import {
+  Location,
   Restaurant,
   RestaurantModel,
 } from '../../database/models/restaurantModel';
@@ -77,4 +78,27 @@ const getRestaurants = asyncHandler(async (req: Request, res: Response) => {
   res.json(restaurants);
 });
 
-export { createRestaurant, getRestaurantByIdOrUniqueName, getRestaurants };
+// @desc    Get all Restaurants near specific location
+// @route   GET /api/restaurants/find/:distance?
+// @access  Public
+const findNear = asyncHandler(async (req: Request, res: Response) => {
+  const { type, coordinates }: Location = req.body;
+
+  const restaurants: Restaurant[] = await RestaurantModel.find({
+    location: {
+      $nearSphere: {
+        $geometry: { type: type, coordinates: coordinates },
+        $maxDistance: req.params.distance ? req.params.distance : 1000,
+      },
+    },
+  });
+
+  res.json(restaurants);
+});
+
+export {
+  createRestaurant,
+  getRestaurantByIdOrUniqueName,
+  getRestaurants,
+  findNear,
+};

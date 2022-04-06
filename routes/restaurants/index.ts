@@ -3,10 +3,13 @@ import {
   createRestaurant,
   getRestaurantByIdOrUniqueName,
   getRestaurants,
+  findNear,
 } from '../../controllers/restaurants/restaurantsController';
 import { authenticate } from '../../middleware/authenticate';
 
 const router = Router();
+
+router.get('/findNear/:distance?', findNear);
 
 router.get('/:filter?', getRestaurants);
 

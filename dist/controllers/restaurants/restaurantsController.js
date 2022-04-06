@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRestaurants = exports.getRestaurantByIdOrUniqueName = exports.createRestaurant = void 0;
+exports.findNear = exports.getRestaurants = exports.getRestaurantByIdOrUniqueName = exports.createRestaurant = void 0;
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const restaurantModel_1 = require("../../database/models/restaurantModel");
@@ -82,4 +82,20 @@ const getRestaurants = (0, express_async_handler_1.default)((req, res) => __awai
     res.json(restaurants);
 }));
 exports.getRestaurants = getRestaurants;
+// @desc    Get all Restaurants near specific location
+// @route   GET /api/restaurants/find/:distance?
+// @access  Public
+const findNear = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { type, coordinates } = req.body;
+    const restaurants = yield restaurantModel_1.RestaurantModel.find({
+        location: {
+            $nearSphere: {
+                $geometry: { type: type, coordinates: coordinates },
+                $maxDistance: req.params.distance ? req.params.distance : 1000,
+            },
+        },
+    });
+    res.json(restaurants);
+}));
+exports.findNear = findNear;
 //# sourceMappingURL=restaurantsController.js.map

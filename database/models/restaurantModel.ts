@@ -1,7 +1,7 @@
 import { Schema, Document, model } from 'mongoose';
 
 interface Location extends Document {
-  type: string;
+  type: 'Point' | 'Polygon';
   coordinates: number[];
 }
 
@@ -53,6 +53,6 @@ const restaurantSchema = new Schema(
     timestamps: true,
   }
 );
-
+restaurantSchema.index({ location: '2dsphere' });
 const RestaurantModel = model('Restaurant', restaurantSchema);
-export { Restaurant, RestaurantModel };
+export { Location, Restaurant, RestaurantModel };

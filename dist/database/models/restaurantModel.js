@@ -36,6 +36,7 @@ const restaurantSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+restaurantSchema.index({ location: '2dsphere' });
 const RestaurantModel = (0, mongoose_1.model)('Restaurant', restaurantSchema);
 exports.RestaurantModel = RestaurantModel;
 //# sourceMappingURL=restaurantModel.js.map
